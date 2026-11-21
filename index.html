@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>أصناف المستهدفات والعروض والبوانص</title>
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="KA Product">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-32.png">
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);box-sizing:border-box}
+  #app{border:0;width:100%;height:100%;display:block;background:#fff}
+  #splash{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#C9964A;font:700 16px Tahoma,Arial,sans-serif;transition:opacity .4s;text-align:center}
+  #splash img{width:110px;height:110px;border-radius:26px}
+  #splash small{color:#F0CE82;font-size:13px}
+  #splash.off{opacity:0;pointer-events:none}
+  #pushBar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));display:none;align-items:center;gap:10px;background:#111827;color:#fff;border:1px solid #C9964A;border-radius:14px;padding:10px 12px;font:600 14px Tahoma,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:9}
+  #pushBar.on{display:flex}
+  #pushBar span{flex:1;line-height:1.5}
+  #pushBar button{border:0;border-radius:10px;padding:9px 12px;font:700 13px Tahoma,Arial,sans-serif;cursor:pointer}
+  #pushYes{background:#C9964A;color:#000}#pushNo{background:transparent;color:#9aa3b8}
+</style>
+</head>
+<body>
+<iframe id="app" title="أصناف المستهدفات والعروض والبوانص" allow="clipboard-write; fullscreen; web-share"></iframe>
+<div id="pushBar"><span>🔔 فعّل الإشعارات عشان يوصلك تنبيه بالعروض الجديدة والتحديثات</span><button id="pushYes">تفعيل</button><button id="pushNo">بعدين</button></div>
+<div id="splash"><img src="icon-512.png" alt=""><div>أصناف المستهدفات والعروض والبوانص</div><small>لأن الأثر هو ما سيبقى</small></div>
+<script>
+  /* لينك الأصناف (Apps Script) — بيتفتح جوه الصفحة دي */
+  var EXEC='https://script.google.com/macros/s/AKfycbzPGEQH5leFn6bYqJuGguc_NS9McKuUTGTmgpFdPw-9LkdtBO8BXt_cOwhkL7z4lPFrTg/exec';
+  var f=document.getElementById('app'),s=document.getElementById('splash');
+  /* مفتاح الجهاز والكود بيتحفظوا هنا (ذاكرة إطار جوجل ممكن المتصفح يمسحها) */
+  var kar=null; try{ kar=localStorage.getItem('kp_kar'); }catch(e){}
+  f.src = EXEC + '?app=1' + (kar ? '#kar=' + encodeURIComponent(kar) : '');
+  function fromGoogle(ev){ try{ return /\.googleusercontent\.com$/.test(new URL(ev.origin).hostname); }catch(e){ return false; } }
+  window.addEventListener('message', function(ev){
+    if(!fromGoogle(ev)) return;
+    var d=ev.data||{};
+    try{ if(d.kp==='save' && typeof d.v==='string' && d.v) localStorage.setItem('kp_kar', d.v); }catch(e){}
+  });
+  f.addEventListener('load',function(){ setTimeout(function(){ s.classList.add('off'); },300); });
+  setTimeout(function(){ s.classList.add('off'); },8000);
+  var SWR = ('serviceWorker' in navigator) ? navigator.serviceWorker.register('sw.js').catch(function(){ return null; }) : Promise.resolve(null);
+
+  /* ===== 🔔 إشعارات اللينك (Firebase) ===== */
+  var FB = { apiKey:'AIzaSyCHQNQHWr0uHhsTFWdp9-6HsQUVfChYE3I', authDomain:'ka-app-24aa3.firebaseapp.com', projectId:'ka-app-24aa3',
+             storageBucket:'ka-app-24aa3.firebasestorage.app', messagingSenderId:'345594149704', appId:'1:345594149704:web:fed3ccfdc973a78ea1917d' };
+  var VAPID = 'BCNGJrGnx1vfwfMxzTdKx3powncu81OdQaGYUfhQrBJNYrM6O2jumEY1KegCtW9FzpEt1Rf9RSNpRbg1JwrBZZA';
+  var bar = document.getElementById('pushBar'), pushTok = null, appWin = null, appOrigin = '*';
+  function pushSupported(){ return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window); }
+  function sendTok(){ if(pushTok && appWin) appWin.postMessage({kp:'pushToken', t:pushTok, p:'web'}, appOrigin); }
+  function getTok(){
+    return SWR.then(function(reg){
+      if(!reg || !window.firebase) throw 0;
+      if(!firebase.apps.length){
+        firebase.initializeApp(FB);
+        firebase.messaging().onMessage(function(m){
+          var n = (m && m.notification) || {};
+          try{ reg.showNotification(n.title || 'أصناف المستهدفات', { body: n.body || '', icon: 'icon-192.png', badge: 'icon-192.png', dir: 'rtl', lang: 'ar', data: { url: location.href } }); }catch(e){}
+        });
+      }
+      return firebase.messaging().getToken({ vapidKey: VAPID, serviceWorkerRegistration: reg });
+    }).then(function(t){ if(t){ pushTok = t; sendTok(); } });
+  }
+  function onLogged(){
+    if(!pushSupported()) return;
+    if(Notification.permission === 'granted'){ getTok().catch(function(){}); return; }
+    if(Notification.permission === 'denied') return;
+    var no = null; try{ no = localStorage.getItem('kp_push_no'); }catch(e){}
+    if(no && Date.now() - (+no) < 3*24*3600*1000) return;
+    bar.classList.add('on');
+  }
+  document.getElementById('pushYes').onclick = function(){
+    bar.classList.remove('on');
+    Notification.requestPermission().then(function(p){ if(p === 'granted') return getTok(); }).catch(function(){});
+  };
+  document.getElementById('pushNo').onclick = function(){ bar.classList.remove('on'); try{ localStorage.setItem('kp_push_no', String(Date.now())); }catch(e){} };
+  window.addEventListener('message', function(ev){
+    if(!fromGoogle(ev)) return;
+    var d = ev.data || {};
+    if(d.kp === 'logged'){ appWin = ev.source; appOrigin = ev.origin; sendTok(); onLogged(); }
+  });
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+</body>
+</html>
