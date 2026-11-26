@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>أصناف المستهدفات والعروض والبوانص</title>
 <meta name="theme-color" content="#000000">
+<!-- v4.9: لوجو جديد + إشعارات من شاشة الانتظار + «بعدين» يوم واحد -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -68,23 +69,35 @@
       return firebase.messaging().getToken({ vapidKey: VAPID, serviceWorkerRegistration: reg });
     }).then(function(t){ if(t){ pushTok = t; sendTok(); } });
   }
+  /* حالة الإشعارات ← للصفحة اللي جوه (زرار 🔔 في الهيدر وشاشة الانتظار) */
+  function pushState(){ return !pushSupported() ? 'unsupported' : Notification.permission; }
+  function sendState(){ if(appWin) appWin.postMessage({kp:'pushState', s:pushState()}, appOrigin); }
+  function askPush(){
+    bar.classList.remove('on');
+    if(!pushSupported()){ sendState(); return; }
+    if(Notification.permission === 'granted'){ getTok().catch(function(){}).then(sendState); return; }
+    if(Notification.permission === 'denied'){ sendState(); return; }
+    Notification.requestPermission().then(function(p){ sendState(); if(p === 'granted') return getTok(); }).catch(function(){}).then(sendState);
+  }
   function onLogged(){
     if(!pushSupported()) return;
     if(Notification.permission === 'granted'){ getTok().catch(function(){}); return; }
     if(Notification.permission === 'denied') return;
     var no = null; try{ no = localStorage.getItem('kp_push_no'); }catch(e){}
-    if(no && Date.now() - (+no) < 3*24*3600*1000) return;
+    if(no && Date.now() - (+no) < 24*3600*1000) return;
     bar.classList.add('on');
   }
   document.getElementById('pushYes').onclick = function(){
     bar.classList.remove('on');
-    Notification.requestPermission().then(function(p){ if(p === 'granted') return getTok(); }).catch(function(){});
+    askPush();
   };
   document.getElementById('pushNo').onclick = function(){ bar.classList.remove('on'); try{ localStorage.setItem('kp_push_no', String(Date.now())); }catch(e){} };
   window.addEventListener('message', function(ev){
     if(!fromGoogle(ev)) return;
     var d = ev.data || {};
-    if(d.kp === 'logged'){ appWin = ev.source; appOrigin = ev.origin; sendTok(); onLogged(); }
+    if(d.kp === 'logged'){ appWin = ev.source; appOrigin = ev.origin; sendTok(); sendState(); onLogged(); }
+    else if(d.kp === 'pending'){ appWin = ev.source; appOrigin = ev.origin; sendState(); if(pushSupported() && Notification.permission === 'granted') getTok().catch(function(){}); }
+    else if(d.kp === 'pushAsk'){ appWin = ev.source; appOrigin = ev.origin; askPush(); }
   });
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
